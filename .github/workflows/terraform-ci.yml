@@ -12,9 +12,20 @@ jobs:
         working-directory: infra/dev
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: hashicorp/setup-terraform@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - run: terraform init
-      - run: terraform validate
-      - run: terraform plan
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Format Check
+        run: terraform fmt -check
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -no-color
