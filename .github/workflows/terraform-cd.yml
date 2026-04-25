@@ -5,13 +5,17 @@ on:
     branches:
       - main
 
+env:
+  ENVIRONMENT: dev
+      
+
 jobs:
   apply:
     runs-on: ubuntu-latest
 
     defaults:
       run:
-        working-directory: infra/dev
+        working-directory: infra/envs/dev
 
     steps:
       - name: Checkout
@@ -35,4 +39,4 @@ jobs:
         run: terraform init
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -var="environment=${{ env.ENVIRONMENT }}"

@@ -3,6 +3,9 @@ name: Terraform CI
 on:
   pull_request:
 
+env:
+  ENVIRONMENT: dev
+
 permissions:
   pull-requests: write
   contents: read
@@ -13,7 +16,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: infra/dev
+        working-directory: infra/envs/dev
 
     steps:
       - name: Checkout
@@ -45,7 +48,7 @@ jobs:
 
       # STEP 1: Create plan (guaranteed output file exists)
       - name: Terraform Plan (create binary plan)
-        run: terraform plan -no-color -out=tfplan
+        run: terraform plan -no-color -var="environment=${{ env.ENVIRONMENT }}" -out=tfplan
 
       # STEP 2: Convert plan to readable text
       - name: Terraform Show Plan
