@@ -48,7 +48,7 @@ jobs:
 
       # STEP 1: Create plan (guaranteed output file exists)
       - name: Terraform Plan (create binary plan)
-        run: terraform plan -no-color -var="environment=${{ env.ENVIRONMENT }}" -out=tfplan
+        run: terraform plan -no-color -var-file=dev.tfvars -out=tfplan
 
       # STEP 2: Convert plan to readable text
       - name: Terraform Show Plan
