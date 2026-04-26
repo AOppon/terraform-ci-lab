@@ -2,7 +2,7 @@ name: Terraform Staging CD
 
 on:
   workflow_run:
-    workflows: ["Terraform CI"]
+    workflows: ["Terraform CD"]
     types:
       - completed
 
