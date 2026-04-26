@@ -9,9 +9,9 @@ terraform {
   }
 
   backend "azurerm" {
-    resource_group_name  = "tfstate-resource-group"
-    storage_account_name = "tfsstaten907t6"
+    resource_group_name  = "rg-terraform-state-staging"
+    storage_account_name = "stgstatetf123456"
     container_name       = "tfstate"
-    key                  = "dev.terraform.tfstate"
+    key                  = "staging.terraform.tfstate"
   }
 }
