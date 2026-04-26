@@ -3,6 +3,9 @@ name: Terraform CI
 on:
   pull_request:
 
+env:
+  ENVIRONMENT: dev
+
 permissions:
   pull-requests: write
   contents: read
@@ -13,7 +16,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: infra/dev
+        working-directory: infra/envs/dev
 
     steps:
       - name: Checkout
@@ -21,7 +24,19 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-
+      
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+            creds: |
+              {
+                "clientId": "${{ secrets.ARM_CLIENT_ID }}",
+                "clientSecret": "${{ secrets.ARM_CLIENT_SECRET }}",
+                "subscriptionId": "${{ secrets.ARM_SUBSCRIPTION_ID }}",
+                "tenantId": "${{ secrets.ARM_TENANT_ID }}"
+              }
+            
+    
       - name: Terraform Init
         run: terraform init
 
@@ -33,7 +48,7 @@ jobs:
 
       # STEP 1: Create plan (guaranteed output file exists)
       - name: Terraform Plan (create binary plan)
-        run: terraform plan -no-color -out=tfplan
+        run: terraform plan -no-color -var-file=dev.tfvars -out=tfplan
 
       # STEP 2: Convert plan to readable text
       - name: Terraform Show Plan
@@ -46,7 +61,7 @@ jobs:
           script: |
             const fs = require('fs');
 
-            const plan = fs.readFileSync('infra/dev/plan.txt', 'utf8');
+            const plan = fs.readFileSync('infra/envs/dev/plan.txt', 'utf8');
 
             const body = [
               '### Terraform Plan 📦',
