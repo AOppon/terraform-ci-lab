@@ -2,7 +2,7 @@ name: Terraform Staging CD
 
 on:
   workflow_run:
-    workflows: ["Terraform CD"]
+    workflows: ["Terraform CD"] # Trigger on completion of the "Terraform CD" workflow
     types:
       - completed
 
