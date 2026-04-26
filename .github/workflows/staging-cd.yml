@@ -3,12 +3,15 @@ name: Terraform Staging CD
 on:
   workflow_dispatch:
 
-env:
-  ENVIRONMENT: staging
-
 jobs:
   terraform:
     runs-on: ubuntu-latest
+
+    environment: # Set GitHub environment for this job
+        name: staging
+
+    env: # Set environment variable for Terraform to use
+      ENVIRONMENT: staging
 
     defaults:
       run:
