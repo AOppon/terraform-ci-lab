@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "Environment to deploy"
+        description: "Environment to deploy (dev/staging/prod)"
         required: true
         type: choice
         options:
@@ -53,9 +53,9 @@ jobs:
       - name: Terraform Init
         run: |
           terraform init \
-            -backend-config="resource_group_name=rg-tfstate" \
-            -backend-config="storage_account_name=sttfstate123" \
-            -backend-config="container_name=tfstate" \
+            -backend-config="resource_group_name=${{ secrets.RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ secrets.STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ secrets.CONTAINER_NAME }}"" \
             -backend-config="key=${{ env.ENVIRONMENT }}.terraform.tfstate"
 
       - name: Terraform Format Check
