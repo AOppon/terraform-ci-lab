@@ -2,6 +2,11 @@ name: Terraform Pipeline
 
 on:
   pull_request:
+
+  push:
+    branches:
+      - main # auto deploy to dev on push to main
+
   workflow_dispatch:
     inputs:
       environment:
@@ -26,7 +31,7 @@ jobs:
       name: ${{ inputs.environment || 'dev' }}
 
     env:
-      ENVIRONMENT: ${{ inputs.environment || 'dev' }}
+      ENVIRONMENT: ${{ github.event_name == 'push' && 'dev' || inputs.environment || 'dev' }}
 
     defaults:
       run:
@@ -93,5 +98,5 @@ jobs:
 
       # Apply ONLY when manually triggered
       - name: Terraform Apply
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
         run: terraform apply -auto-approve tfplan
