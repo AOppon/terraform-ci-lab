@@ -28,7 +28,7 @@ jobs:
 
     # For PRs → default to dev (no approvals triggered)
     environment:
-      name: ${{ inputs.environment || 'dev' }}
+      name: ${{ github.event_name == 'push' && 'dev' || inputs.environment || 'dev' }}
 
     env:
       ENVIRONMENT: ${{ github.event_name == 'push' && 'dev' || inputs.environment || 'dev' }}
@@ -71,6 +71,7 @@ jobs:
 
       # Create plan
       - name: Terraform Plan
+        if: github.event_name == 'pull_request'
         run: terraform plan -no-color -var-file=${{ env.ENVIRONMENT }}.tfvars -out=tfplan
 
       # Show plan for PRs
@@ -85,6 +86,12 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            
+            if (!fs.existsSync('plan.txt')) {
+                console.log('No plan file found, skipping comment.');
+                return;
+            }
+
             const plan = fs.readFileSync('plan.txt', 'utf8');
 
             github.rest.issues.createComment({
