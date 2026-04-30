@@ -74,9 +74,9 @@ jobs:
         run: terraform plan -no-color -var-file=${{ env.ENVIRONMENT }}.tfvars -out=tfplan
 
       # Show plan for PRs
-      - name: Show Plan (PR)
+      - name: Terraform Show Plan
         if: github.event_name == 'pull_request'
-        run: terraform show -no-color tfplan
+        run: terraform show -no-color tfplan > plan.txt
 
       # Comment on PR
       - name: Comment Plan on PR
@@ -85,9 +85,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const plan = require('child_process')
-              .execSync('terraform show -no-color tfplan')
-              .toString();
+            const plan = fs.readFileSync('plan.txt', 'utf8');
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
