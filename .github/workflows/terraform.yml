@@ -71,7 +71,6 @@ jobs:
 
       # Create plan
       - name: Terraform Plan
-        if: github.event_name == 'pull_request'
         run: terraform plan -no-color -var-file=${{ env.ENVIRONMENT }}.tfvars -out=tfplan
 
       # Show plan for PRs
