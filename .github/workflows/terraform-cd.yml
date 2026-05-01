@@ -1,42 +1,42 @@
-name: Terraform CD
+# name: Terraform CD
 
-on:
-  push:
-    branches:
-      - main
+# on:
+#   push:
+#     branches:
+#       - main
 
-env:
-  ENVIRONMENT: dev
+# env:
+#   ENVIRONMENT: dev
       
 
-jobs:
-  apply:
-    runs-on: ubuntu-latest
+# jobs:
+#   apply:
+#     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: infra/envs/dev
+#     defaults:
+#       run:
+#         working-directory: infra/envs/dev
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
 
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-            creds: |
-              {
-                "clientId": "${{ secrets.ARM_CLIENT_ID }}",
-                "clientSecret": "${{ secrets.ARM_CLIENT_SECRET }}",
-                "subscriptionId": "${{ secrets.ARM_SUBSCRIPTION_ID }}",
-                "tenantId": "${{ secrets.ARM_TENANT_ID }}"
-              }
+#       - name: Azure Login
+#         uses: azure/login@v2
+#         with:
+#             creds: |
+#               {
+#                 "clientId": "${{ secrets.ARM_CLIENT_ID }}",
+#                 "clientSecret": "${{ secrets.ARM_CLIENT_SECRET }}",
+#                 "subscriptionId": "${{ secrets.ARM_SUBSCRIPTION_ID }}",
+#                 "tenantId": "${{ secrets.ARM_TENANT_ID }}"
+#               }
 
-      - name: Terraform Init
-        run: terraform init
+#       - name: Terraform Init
+#         run: terraform init
 
-      - name: Terraform Apply
-        run: terraform apply -auto-approve -var-file=dev.tfvars
+#       - name: Terraform Apply
+#         run: terraform apply -auto-approve -var-file=dev.tfvars
