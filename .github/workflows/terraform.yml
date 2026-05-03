@@ -18,6 +18,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
+    environment: dev
     env:
       ENVIRONMENT: dev
 
@@ -38,12 +39,7 @@ jobs:
               "subscriptionId": "${{ secrets.ARM_SUBSCRIPTION_ID }}",
               "tenantId": "${{ secrets.ARM_TENANT_ID }}"
             }
-      - name: Debug Backend Values
-        run: |
-          echo "ENV=${{ env.ENVIRONMENT }}"
-          echo "RG=${{ secrets.RESOURCE_GROUP }}"
-          echo "SA=${{ secrets.STORAGE_ACCOUNT }}"
-          echo "CN=${{ secrets.CONTAINER_NAME }}"
+    
 
       - name: Terraform Init
         run: |
