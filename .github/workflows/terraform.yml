@@ -38,6 +38,12 @@ jobs:
               "subscriptionId": "${{ secrets.ARM_SUBSCRIPTION_ID }}",
               "tenantId": "${{ secrets.ARM_TENANT_ID }}"
             }
+      - name: Debug Backend Values
+        run: |
+          echo "ENV=${{ env.ENVIRONMENT }}"
+          echo "RG=${{ secrets.RESOURCE_GROUP }}"
+          echo "SA=${{ secrets.STORAGE_ACCOUNT }}"
+          echo "CN=${{ secrets.CONTAINER_NAME }}"
 
       - name: Terraform Init
         run: |
@@ -48,12 +54,7 @@ jobs:
             -backend-config="key=${{ env.ENVIRONMENT }}.terraform.tfstate" \
             -backend-config="use_azuread_auth=true"
         
-      - name: Debug Backend Values
-        run: |
-          echo "ENV=${{ env.ENVIRONMENT }}"
-          echo "RG=${{ secrets.RESOURCE_GROUP }}"
-          echo "SA=${{ secrets.STORAGE_ACCOUNT }}"
-           echo "CN=${{ secrets.CONTAINER_NAME }}"
+      
       - name: Terraform Plan
         run: terraform plan -no-color -var-file=dev.tfvars -out=tfplan
 
