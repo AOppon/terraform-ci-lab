@@ -2,6 +2,8 @@ name: Terraform Pipeline
 
 on:
   pull_request:
+    branches:
+      - main
 
   push:
     branches:
@@ -56,7 +58,7 @@ jobs:
 
   # DEV (AUTO DEPLOY)
   dev:
-    if: github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     environment: dev
