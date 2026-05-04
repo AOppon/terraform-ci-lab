@@ -5,102 +5,176 @@ on:
 
   push:
     branches:
-      - main # auto deploy to dev on push to main
-
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: "Environment to deploy (dev/staging/prod)"
-        required: true
-        type: choice
-        options:
-          - dev
-          - staging
-          - prod
+      - main
 
 permissions:
   contents: read
   pull-requests: write
 
 jobs:
-  terraform:
+
+  # PR PLAN ONLY
+  plan:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
-    # For PRs → default to dev (no approvals triggered)
-    environment:
-      name: ${{ github.event_name == 'push' && 'dev' || inputs.environment || 'dev' }}
-
+    environment: dev
     env:
-      ENVIRONMENT: ${{ github.event_name == 'push' && 'dev' || inputs.environment || 'dev' }}
+      ENVIRONMENT: dev
 
     defaults:
       run:
-        working-directory: infra/envs/${{ env.ENVIRONMENT }}
+        working-directory: infra/envs/dev
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Azure Login
-        uses: azure/login@v2
+      - uses: azure/login@v2
         with:
           creds: |
-              {
-                "clientId": "${{ secrets.ARM_CLIENT_ID }}",
-                "clientSecret": "${{ secrets.ARM_CLIENT_SECRET }}",
-                "subscriptionId": "${{ secrets.ARM_SUBSCRIPTION_ID }}",
-                "tenantId": "${{ secrets.ARM_TENANT_ID }}"
-              }
+            {
+              "clientId": "${{ secrets.ARM_CLIENT_ID }}",
+              "clientSecret": "${{ secrets.ARM_CLIENT_SECRET }}",
+              "subscriptionId": "${{ secrets.ARM_SUBSCRIPTION_ID }}",
+              "tenantId": "${{ secrets.ARM_TENANT_ID }}"
+            }
+    
 
       - name: Terraform Init
         run: |
-          terraform init \
+            terraform init \
             -backend-config="resource_group_name=${{ secrets.RESOURCE_GROUP }}" \
             -backend-config="storage_account_name=${{ secrets.STORAGE_ACCOUNT }}" \
             -backend-config="container_name=${{ secrets.CONTAINER_NAME }}" \
-            -backend-config="key=${{ env.ENVIRONMENT }}.terraform.tfstate"
-
-      - name: Terraform Format Check
-        run: terraform fmt -check
-
-      - name: Terraform Validate
-        run: terraform validate
-
-      # Create plan
+            -backend-config="key=${{ env.ENVIRONMENT }}.terraform.tfstate" \
+            -backend-config="use_azuread_auth=true"
+        
+      
       - name: Terraform Plan
-        run: terraform plan -no-color -var-file=${{ env.ENVIRONMENT }}.tfvars -out=tfplan
+        run: terraform plan -no-color -var-file=dev.tfvars -out=tfplan
 
-      # Show plan for PRs
-      - name: Terraform Show Plan
-        if: github.event_name == 'pull_request'
-        run: terraform show -no-color tfplan > plan.txt
+  # DEV (AUTO DEPLOY)
+  dev:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
 
-      # Comment on PR
-      - name: Comment Plan on PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+    environment: dev
+
+    env:
+      ENVIRONMENT: dev
+
+    defaults:
+      run:
+        working-directory: infra/envs/dev
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+
+      - uses: azure/login@v2
         with:
-          script: |
-            const fs = require('fs');
-            
-            if (!fs.existsSync('plan.txt')) {
-                console.log('No plan file found, skipping comment.');
-                return;
+          creds: |
+            {
+              "clientId": "${{ secrets.ARM_CLIENT_ID }}",
+              "clientSecret": "${{ secrets.ARM_CLIENT_SECRET }}",
+              "subscriptionId": "${{ secrets.ARM_SUBSCRIPTION_ID }}",
+              "tenantId": "${{ secrets.ARM_TENANT_ID }}"
             }
 
-            const plan = fs.readFileSync('plan.txt', 'utf8');
+      - name: Terraform Init
+        run: terraform init \
+          -backend-config="resource_group_name=${{ secrets.RESOURCE_GROUP }}" \
+          -backend-config="storage_account_name=${{ secrets.STORAGE_ACCOUNT }}" \
+          -backend-config="container_name=${{ secrets.CONTAINER_NAME }}" \
+          -backend-config="key=${{ env.ENVIRONMENT }}.terraform.tfstate"
 
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `### Terraform Plan 📦\n\`\`\`hcl\n${plan}\n\`\`\``
-            });
+      - name: Terraform Plan
+        run: terraform plan -no-color -var-file=dev.tfvars -out=tfplan
 
-      # Apply ONLY when manually triggered
       - name: Terraform Apply
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+        run: terraform apply -auto-approve tfplan
+
+  # STAGING (AUTO TRIGGER + APPROVAL)
+  staging:
+    if: github.event_name == 'push'
+    needs: dev
+    runs-on: ubuntu-latest
+
+    environment: staging   # 👈 approval happens here
+
+    env:
+      ENVIRONMENT: staging
+
+    defaults:
+      run:
+        working-directory: infra/envs/staging
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+
+      - uses: azure/login@v2
+        with:
+          creds: |
+            {
+              "clientId": "${{ secrets.ARM_CLIENT_ID }}",
+              "clientSecret": "${{ secrets.ARM_CLIENT_SECRET }}",
+              "subscriptionId": "${{ secrets.ARM_SUBSCRIPTION_ID }}",
+              "tenantId": "${{ secrets.ARM_TENANT_ID }}"
+            }
+
+      - name: Terraform Init
+        run: terraform init \
+          -backend-config="resource_group_name=${{ secrets.RESOURCE_GROUP }}" \
+          -backend-config="storage_account_name=${{ secrets.STORAGE_ACCOUNT }}" \
+          -backend-config="container_name=${{ secrets.CONTAINER_NAME }}" \
+          -backend-config="key=staging.terraform.tfstate"
+
+      - name: Terraform Plan
+        run: terraform plan -no-color -var-file=staging.tfvars -out=tfplan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+
+  # PROD (PROMOTION AFTER STAGING)
+  prod:
+    if: github.event_name == 'push'
+    needs: staging
+    runs-on: ubuntu-latest
+
+    environment: prod   # 👈 stricter approval
+
+    env:
+      ENVIRONMENT: prod
+
+    defaults:
+      run:
+        working-directory: infra/envs/prod
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+
+      - uses: azure/login@v2
+        with:
+          creds: |
+            {
+              "clientId": "${{ secrets.ARM_CLIENT_ID }}",
+              "clientSecret": "${{ secrets.ARM_CLIENT_SECRET }}",
+              "subscriptionId": "${{ secrets.ARM_SUBSCRIPTION_ID }}",
+              "tenantId": "${{ secrets.ARM_TENANT_ID }}"
+            }
+
+      - name: Terraform Init
+        run: terraform init \
+          -backend-config="resource_group_name=${{ secrets.RESOURCE_GROUP }}" \
+          -backend-config="storage_account_name=${{ secrets.STORAGE_ACCOUNT }}" \
+          -backend-config="container_name=${{ secrets.CONTAINER_NAME }}" \
+          -backend-config="key=prod.terraform.tfstate"
+
+      - name: Terraform Plan
+        run: terraform plan -no-color -var-file=prod.tfvars -out=tfplan
+
+      - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
