@@ -127,12 +127,13 @@ jobs:
             }
 
       - name: Terraform Init
-        run: terraform init \
-          -backend-config="resource_group_name=${{ secrets.RESOURCE_GROUP }}" \
-          -backend-config="storage_account_name=${{ secrets.STORAGE_ACCOUNT }}" \
-          -backend-config="container_name=${{ secrets.CONTAINER_NAME }}" \
-          -backend-config="key=${{ env.ENVIRONMENT }}.terraform.tfstate" \
-          -backend-config="use_azuread_auth=true"
+        run: |
+            terraform init \
+            -backend-config="resource_group_name=${{ secrets.RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ secrets.STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ secrets.CONTAINER_NAME }}" \
+            -backend-config="key=${{ env.ENVIRONMENT }}.terraform.tfstate" \
+            -backend-config="use_azuread_auth=true"
 
       - name: Terraform Plan
         run: terraform plan -no-color -var-file=staging.tfvars -out=tfplan
@@ -141,44 +142,45 @@ jobs:
         run: terraform apply -auto-approve tfplan
 
   # PROD (PROMOTION AFTER STAGING)
-#   prod:
-#     # if: github.event_name == 'push'
-    # needs: staging
-    # runs-on: ubuntu-latest
+  prod:
+    if: github.event_name == 'push'
+    needs: staging
+    runs-on: ubuntu-latest
 
-    # environment: prod   # 👈 stricter approval
+    environment: prod   # 👈 stricter approval
 
-    # env:
-    #   ENVIRONMENT: prod
+    env:
+      ENVIRONMENT: prod
 
-    # defaults:
-    #   run:
-    #     working-directory: infra/envs/prod
+    defaults:
+      run:
+        working-directory: infra/envs/prod
 
-    # steps:
-    #   - uses: actions/checkout@v4
-    #   - uses: hashicorp/setup-terraform@v3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
 
-    #   - uses: azure/login@v2
-    #     with:
-    #       creds: |
-    #         {
-    #           "clientId": "${{ secrets.ARM_CLIENT_ID }}",
-    #           "clientSecret": "${{ secrets.ARM_CLIENT_SECRET }}",
-    #           "subscriptionId": "${{ secrets.ARM_SUBSCRIPTION_ID }}",
-    #           "tenantId": "${{ secrets.ARM_TENANT_ID }}"
-    #         }
+      - uses: azure/login@v2
+        with:
+          creds: |
+            {
+              "clientId": "${{ secrets.ARM_CLIENT_ID }}",
+              "clientSecret": "${{ secrets.ARM_CLIENT_SECRET }}",
+              "subscriptionId": "${{ secrets.ARM_SUBSCRIPTION_ID }}",
+              "tenantId": "${{ secrets.ARM_TENANT_ID }}"
+            }
 
-    #   - name: Terraform Init
-    #     run: terraform init \
-    #       -backend-config="resource_group_name=${{ secrets.RESOURCE_GROUP }}" \
-    #       -backend-config="storage_account_name=${{ secrets.STORAGE_ACCOUNT }}" \
-    #       -backend-config="container_name=${{ secrets.CONTAINER_NAME }}" \
-    #       -backend-config="key=${{ env.ENVIRONMENT }}.terraform.tfstate" \
-    #       -backend-config="use_azuread_auth=true"
+      - name: Terraform Init
+        run: |
+            terraform init \
+            -backend-config="resource_group_name=${{ secrets.RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ secrets.STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ secrets.CONTAINER_NAME }}" \
+            -backend-config="key=${{ env.ENVIRONMENT }}.terraform.tfstate" \
+            -backend-config="use_azuread_auth=true"
 
-    #   - name: Terraform Plan
-    #     run: terraform plan -no-color -var-file=prod.tfvars -out=tfplan
+      - name: Terraform Plan
+        run: terraform plan -no-color -var-file=prod.tfvars -out=tfplan
 
-    #   - name: Terraform Apply
-    #     run: terraform apply -auto-approve tfplan
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
