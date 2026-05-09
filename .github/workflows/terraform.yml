@@ -396,3 +396,113 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
 
+  prod-plan:
+    if: github.event_name == 'push'
+    needs: staging-apply
+    name: Preview Plan · Prod
+    runs-on: ubuntu-latest
+
+    environment: prod
+
+    env:
+      ENVIRONMENT: prod
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+    defaults:
+      run:
+        working-directory: infra/envs/prod
+
+    outputs:
+      artifact-name: ${{ steps.set-artifact-name.outputs.name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Terraform Init
+        run: |
+            terraform init \
+            -backend-config="resource_group_name=${{ secrets.RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ secrets.STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ secrets.CONTAINER_NAME }}" \
+            -backend-config="key=${{ env.ENVIRONMENT }}.terraform.tfstate" \
+            -backend-config="use_azuread_auth=true"
+
+      - name: Set artifact name
+        id: set-artifact-name
+        run: echo "name=tfplan-${{ env.ENVIRONMENT }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Terraform Plan
+        run: terraform plan -no-color -var-file=prod.tfvars -out=tfplan
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.set-artifact-name.outputs.name }}
+          path: infra/envs/prod/tfplan
+          retention-days: 1
+
+  prod-apply:
+    if: github.event_name == 'push'
+    needs: prod-plan
+    name: Deploy · Prod
+    runs-on: ubuntu-latest
+
+    environment: prod
+
+    env:
+      ENVIRONMENT: prod
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+    defaults:
+      run:
+        working-directory: infra/envs/prod
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ secrets.RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ secrets.STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ secrets.CONTAINER_NAME }}" \
+            -backend-config="key=${{ env.ENVIRONMENT }}.terraform.tfstate" \
+            -backend-config="use_azuread_auth=true"
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.prod-plan.outputs.artifact-name }}
+          path: infra/envs/prod
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+
