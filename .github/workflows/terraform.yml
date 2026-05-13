@@ -456,7 +456,7 @@ jobs:
         run: echo "name=tfplan-${{ env.ENVIRONMENT }}-${{ github.sha }}" >> $GITHUB_OUTPUT
 
       - name: Terraform Plan
-        run: terraform plan -destroy -no-color -var-file=prod.tfvars -out=tfplan
+        run: terraform plan -no-color -var-file=prod.tfvars -out=tfplan
 
       - name: Upload plan artifact
         uses: actions/upload-artifact@v4
@@ -516,5 +516,5 @@ jobs:
           path: infra/envs/prod
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: terraform destroy -auto-approve tfplan
 
