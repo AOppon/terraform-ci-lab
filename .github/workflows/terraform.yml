@@ -288,7 +288,7 @@ jobs:
           path: infra/envs/dev
     
       - name: Terraform Apply
-        run: terraform destroy -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan
 
   staging-plan:
     if: github.event_name == 'push'
@@ -402,7 +402,7 @@ jobs:
           path: infra/envs/staging
 
       - name: Terraform Apply
-        run: terraform destroy -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan
 
   prod-plan:
     if: github.event_name == 'push'
@@ -516,5 +516,5 @@ jobs:
           path: infra/envs/prod
 
       - name: Terraform Apply
-        run: terraform destroy -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan
 
