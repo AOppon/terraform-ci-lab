@@ -103,7 +103,7 @@ jobs:
             -backend-config="key=${{ env.ENVIRONMENT }}.terraform.tfstate" \
             -backend-config="use_azuread_auth=true"
       - name: Terraform Plan
-        run: terraform plan -no-color -var-file=dev.tfvars -out=tfplan
+        run: terraform plan -destroy -no-color -var-file=dev.tfvars -out=tfplan
       
       - name: Terraform Show
         run: terraform show -no-color tfplan > plan.txt
@@ -229,7 +229,7 @@ jobs:
         id: set-artifact-name
         run: echo "name=tfplan-${{ env.ENVIRONMENT }}-${{ github.sha }}" >> $GITHUB_OUTPUT
       - name: Terraform Plan
-        run: terraform plan -no-color -var-file=dev.tfvars -out=tfplan
+        run: terraform plan -destroy -no-color -var-file=dev.tfvars -out=tfplan
 
       - name: Upload plan artifact
         uses: actions/upload-artifact@v4
@@ -288,7 +288,7 @@ jobs:
           path: infra/envs/dev
     
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: terraform destroy -auto-approve tfplan
 
   staging-plan:
     if: github.event_name == 'push'
@@ -342,7 +342,7 @@ jobs:
         run: echo "name=tfplan-${{ env.ENVIRONMENT }}-${{ github.sha }}" >> $GITHUB_OUTPUT
 
       - name: Terraform Plan
-        run: terraform plan -no-color -var-file=staging.tfvars -out=tfplan
+        run: terraform plan -destroy -no-color -var-file=staging.tfvars -out=tfplan
 
       - name: Upload plan artifact
         uses: actions/upload-artifact@v4
@@ -402,7 +402,7 @@ jobs:
           path: infra/envs/staging
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: terraform destroy -auto-approve tfplan
 
   prod-plan:
     if: github.event_name == 'push'
@@ -456,7 +456,7 @@ jobs:
         run: echo "name=tfplan-${{ env.ENVIRONMENT }}-${{ github.sha }}" >> $GITHUB_OUTPUT
 
       - name: Terraform Plan
-        run: terraform plan -no-color -var-file=prod.tfvars -out=tfplan
+        run: terraform plan -destroy -no-color -var-file=prod.tfvars -out=tfplan
 
       - name: Upload plan artifact
         uses: actions/upload-artifact@v4
@@ -516,5 +516,5 @@ jobs:
           path: infra/envs/prod
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: terraform destroy -auto-approve tfplan
 
