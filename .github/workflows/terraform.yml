@@ -516,5 +516,5 @@ jobs:
           path: infra/envs/prod
 
       - name: Terraform Apply
-        run: terraform destroy -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan
 
